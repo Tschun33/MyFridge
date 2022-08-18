@@ -1,3 +1,4 @@
+from datetime import date
 import werkzeug.security
 from flask import Flask, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
@@ -34,6 +35,7 @@ class Ingredient(db.Model):
     name = db.Column(db.String(250), nullable=False)
     date_added = db.Column(db.Date, nullable=False)
     date_expired = db.Column(db.Date, nullable=False)
+    category = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
@@ -96,7 +98,7 @@ def register():
     return render_template("register.html", form=form)
 
 
-@app.route("/login")
+@app.route("/login", methods=["POST", "GET"])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -116,10 +118,39 @@ def login():
                 return redirect(url_for('login'))
     return render_template("login.html", form=form)
 
-@app.route("/add")
+
+@app.route("/add", methods=["POST", "GET"])
+@login_required
 def add_ingredient():
     form = IngredientForm()
+    if form.validate_on_submit():
+        new_ingredient = Ingredient(
+            name=form.name.data,
+            date_added=date.today(),
+            user=current_user,
+            date_expired=form.date_expired.data,
+            category=form.category.data
+        )
+        db.session.add(new_ingredient)
+        db.session.commit()
+        return redirect(url_for("show_fridge"))
+
     return render_template("add-ingredient.html", form=form)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("home"))
+
+
+@app.route("/fridge")
+@login_required
+def show_fridge():
+    user = current_user
+    items = db.session.query(Ingredient).filter_by(user_id=current_user.id).all()
+    return render_template("fridge.html", items=items)
 
 
 # Runs the application

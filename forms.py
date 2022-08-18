@@ -14,12 +14,13 @@ class RegisterForm(FlaskForm):
 
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired()])
-    password = StringField("Password", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Login")
 
 
 class IngredientForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
-    category = SelectField('Category', choices=[('fruit', 'fruit'), ('vegetable', 'vegetable')])
-    date_expired = DateField('Expiration Date', validators=[DataRequired()])
+    category = SelectField('Category', choices=[('Fruit', 'Fruit'), ('Vegetable', 'Vegetable'), ('Dairy', 'Dairy'),
+                                                ('Cheese', 'Cheese')])
+    date_expired = DateField('Expiration Date')
     submit = SubmitField("Add Ingredient")

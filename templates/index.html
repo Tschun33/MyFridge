@@ -5,6 +5,8 @@
     <title>MyFridge</title>
 </head>
 <body>
-
+    {% if current_user.is_authenticated %}
+    Hi {{ current_user.name }}!
+    {% endif %}
 </body>
 </html>
