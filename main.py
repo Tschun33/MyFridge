@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from functools import wraps
 from flask import abort
-from forms import RegisterForm, LoginForm
+from forms import RegisterForm, LoginForm, IngredientForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
@@ -95,6 +95,7 @@ def register():
             return redirect(url_for("home"))
     return render_template("register.html", form=form)
 
+
 @app.route("/login")
 def login():
     form = LoginForm()
@@ -114,6 +115,11 @@ def login():
                 flash(error)
                 return redirect(url_for('login'))
     return render_template("login.html", form=form)
+
+@app.route("/add")
+def add_ingredient():
+    form = IngredientForm()
+    return render_template("add-ingredient.html", form=form)
 
 
 # Runs the application
