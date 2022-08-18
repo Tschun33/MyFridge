@@ -1,6 +1,6 @@
 from datetime import date
 import werkzeug.security
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, redirect, url_for, flash, jsonify, request
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -38,6 +38,12 @@ class Ingredient(db.Model):
     category = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+    def to_dict(self):
+        dictionary = {}
+        for column in self.__table__.columns:
+            dictionary[column.name] = getattr(self, column.name)
+        return dictionary
+
 
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
@@ -63,6 +69,15 @@ def admin_only(f):
         # Otherwise continue with the route function
         return f(*args, **kwargs)
 
+    return decorated_function
+
+
+def api_key_provided(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.args.get("api-key") != "SecretApiKey":
+            return abort(403)
+        return f(*args, **kwargs)
     return decorated_function
 
 
@@ -151,6 +166,23 @@ def show_fridge():
     user = current_user
     items = db.session.query(Ingredient).filter_by(user_id=current_user.id).all()
     return render_template("fridge.html", items=items)
+
+
+# RESTful Routes
+@app.route("/all")
+def get_all():
+    if request.args.get("api-key") == "SecretApiKey":
+        ingredients = db.session.query(Ingredient).all()
+        return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
+    else:
+        return jsonify(response={"error": "Not allowed"})
+
+
+@app.route("/by_user/<user_id>")
+@api_key_provided
+def get_by_user(user_id):
+    ingredients = db.session.query(Ingredient).filter_by(user_id=user_id).all()
+    return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
 
 
 # Runs the application
