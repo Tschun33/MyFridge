@@ -12,6 +12,7 @@ from flask import abort
 from forms import RegisterForm, LoginForm, IngredientForm
 
 app = Flask(__name__)
+# for learning purpose only
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap(app)
@@ -71,13 +72,14 @@ def admin_only(f):
 
     return decorated_function
 
-
+# for learning purpose only. API-Key should be environment variable
 def api_key_provided(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if request.args.get("api-key") != "SecretApiKey":
             return abort(403)
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -178,11 +180,35 @@ def get_all():
         return jsonify(response={"error": "Not allowed"})
 
 
-@app.route("/by_user/<user_id>")
+@app.route("/by_user/<user_id>", methods=["GET"])
 @api_key_provided
 def get_by_user(user_id):
     ingredients = db.session.query(Ingredient).filter_by(user_id=user_id).all()
     return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
+
+
+@app.route("/add_to_user/<user_id>", methods=["POST"])
+@api_key_provided
+def add_to_user(user_id):
+    new_ingredient = Ingredient(
+        name=request.args.get("name"),
+        date_added=date.today(),
+        user=user_id,
+        date_expired=request.args.get("date_expired"),
+        category=request.args.get("category")
+    )
+    db.session.add(new_ingredient)
+    db.session.commit()
+    return jsonify(response={"success:": "Item added successfully"})
+
+
+@app.route("/update_date_expired/<ingredient_id>", methods=["PATCH"])
+def update_ingredient(ingredient_id):
+    ingredient_to_update = db.session.query(Ingredient).filter_by(ingredient_id).first()
+    new_date_expired = request.args.get("date_expired")
+    ingredient_to_update.date_expired = new_date_expired
+    db.session.commit()
+    return jsonify(response={"success": "Item successfully updated"})
 
 
 # Runs the application

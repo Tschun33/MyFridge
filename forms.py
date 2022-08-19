@@ -21,6 +21,6 @@ class LoginForm(FlaskForm):
 class IngredientForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     category = SelectField('Category', choices=[('Fruit', 'Fruit'), ('Vegetable', 'Vegetable'), ('Dairy', 'Dairy'),
-                                                ('Cheese', 'Cheese')])
+                                                ('Cheese', 'Cheese'), ('Raw Meat', 'Raw Meat')])
     date_expired = DateField('Expiration Date')
     submit = SubmitField("Add Ingredient")
