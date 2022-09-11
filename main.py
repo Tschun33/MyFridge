@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from functools import wraps
 from flask import abort
-from forms import RegisterForm, LoginForm, IngredientForm
+from forms import RegisterForm, LoginForm, FoodForm
 
 app = Flask(__name__)
 # for learning purpose only
@@ -29,10 +29,11 @@ login_manager.init_app(app)
 def load_user(user_id):
     return db.session.query(User).filter_by(id=user_id).first()
 
-
-class Ingredient(db.Model):
-    __tablename__ = 'ingridients'
+# Models
+class Food(db.Model):
+    __tablename__ = 'food'
     id = db.Column(db.Integer, primary_key=True)
+    quantity = db.Column(db.Float, nullable=False)
     name = db.Column(db.String(250), nullable=False)
     date_added = db.Column(db.Date, nullable=False)
     date_expired = db.Column(db.Date, nullable=False)
@@ -54,7 +55,26 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(250), nullable=False)
     name = db.Column(db.String(250), nullable=False)
     # User has many ingridients
-    ingredients = db.relationship('Ingredient', backref='user')
+    food = db.relationship('Food', backref='user')
+    recipe = db.relaionship('Recipe', backref='user')
+
+
+class Recipe(UserMixin, db.Model):
+    __tablename__= 'recipes'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(250), nullable=False)
+    category = db.Column(db.String(250), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    ingredient = db.relationship('Ingredient', backref='recipe')
+
+
+class Ingredient(UserMixin, db.Model):
+    __tablename__= 'ingredients'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(250), nullable=False)
+    category = db.Column(db.String(250), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
 
 
 db.create_all()
@@ -71,6 +91,7 @@ def admin_only(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
 
 # for learning purpose only. API-Key should be environment variable
 def api_key_provided(f):
@@ -138,21 +159,22 @@ def login():
 
 @app.route("/add", methods=["POST", "GET"])
 @login_required
-def add_ingredient():
-    form = IngredientForm()
+def add_food():
+    form = FoodForm()
     if form.validate_on_submit():
-        new_ingredient = Ingredient(
+        new_food = Food(
             name=form.name.data,
+            quantity=form.quantity.data,
             date_added=date.today(),
             user=current_user,
             date_expired=form.date_expired.data,
             category=form.category.data
         )
-        db.session.add(new_ingredient)
+        db.session.add(new_food)
         db.session.commit()
         return redirect(url_for("show_fridge"))
 
-    return render_template("add-ingredient.html", form=form)
+    return render_template("add-food.html", form=form)
 
 
 @app.route("/logout")
@@ -166,7 +188,7 @@ def logout():
 @login_required
 def show_fridge():
     user = current_user
-    items = db.session.query(Ingredient).filter_by(user_id=current_user.id).all()
+    items = db.session.query(Food).filter_by(user_id=current_user.id).all()
     return render_template("fridge.html", items=items)
 
 
@@ -174,7 +196,7 @@ def show_fridge():
 @app.route("/all")
 def get_all():
     if request.args.get("api-key") == "SecretApiKey":
-        ingredients = db.session.query(Ingredient).all()
+        ingredients = db.session.query(Food).all()
         return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
     else:
         return jsonify(response={"error": "Not allowed"})
@@ -183,28 +205,29 @@ def get_all():
 @app.route("/by_user/<user_id>", methods=["GET"])
 @api_key_provided
 def get_by_user(user_id):
-    ingredients = db.session.query(Ingredient).filter_by(user_id=user_id).all()
+    ingredients = db.session.query(Food).filter_by(user_id=user_id).all()
     return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
 
 
 @app.route("/add_to_user/<user_id>", methods=["POST"])
 @api_key_provided
 def add_to_user(user_id):
-    new_ingredient = Ingredient(
+    new_food = Food(
         name=request.args.get("name"),
         date_added=date.today(),
         user=user_id,
         date_expired=request.args.get("date_expired"),
         category=request.args.get("category")
     )
-    db.session.add(new_ingredient)
+    db.session.add(new_food)
     db.session.commit()
     return jsonify(response={"success:": "Item added successfully"})
 
 
 @app.route("/update_date_expired/<ingredient_id>", methods=["PATCH"])
+@api_key_provided
 def update_ingredient(ingredient_id):
-    ingredient_to_update = db.session.query(Ingredient).filter_by(ingredient_id).first()
+    ingredient_to_update = db.session.query(Food).filter_by(ingredient_id).first()
     new_date_expired = request.args.get("date_expired")
     ingredient_to_update.date_expired = new_date_expired
     db.session.commit()

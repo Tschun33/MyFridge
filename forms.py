@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, PasswordField, SelectField, DateField
+from wtforms import StringField, SubmitField, PasswordField, SelectField, DateField, DecimalField
 from wtforms.validators import DataRequired, URL
 from flask_ckeditor import CKEditorField
 
@@ -18,8 +18,9 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Login")
 
 
-class IngredientForm(FlaskForm):
+class FoodForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
+    quantity = DecimalField("Quantity", validators=[DataRequired()])
     category = SelectField('Category', choices=[('Fruit', 'Fruit'), ('Vegetable', 'Vegetable'), ('Dairy', 'Dairy'),
                                                 ('Cheese', 'Cheese'), ('Raw Meat', 'Raw Meat')])
     date_expired = DateField('Expiration Date')
