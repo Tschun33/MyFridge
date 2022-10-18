@@ -99,7 +99,7 @@ def admin_only(f):
 
 
 # Declaration of the task as a function.
-def check_mhd():
+def check_expired_date():
     today = date.today()
     food_expire_today = db.session.query(Food).filter_by(date_expired=today).all()
     user_ids = set()
@@ -123,26 +123,15 @@ def check_mhd():
             new_email.write(text)
 
 
-
-
-
-
-
-
-
-
 # Create the background scheduler
 scheduler = BackgroundScheduler()
 # Create the job
-scheduler.add_job(func=check_mhd, trigger="interval", seconds=10)
+scheduler.add_job(func=check_expired_date, trigger="cron", hour="06", minute="00")
 # Start the scheduler
 scheduler.start()
 
 # /!\ IMPORTANT /!\ : Shut down the scheduler when exiting the app
 atexit.register(lambda: scheduler.shutdown())
-
-
-
 
 
 # for learning purpose only. API-Key should be environment variable
@@ -228,10 +217,11 @@ def add_food():
 
     return render_template("add-food.html", form=form)
 
-@app.route("/create_recipe", methods=["POST", "GET"])
-@login_required
-def create_recipe():
-    form = RecipeForm()
+
+#@app.route("/create_recipe", methods=["POST", "GET"])
+#@login_required
+#def create_recipe():
+
 
 
 @app.route("/logout")
@@ -244,7 +234,6 @@ def logout():
 @app.route("/fridge")
 @login_required
 def show_fridge():
-    user = current_user
     items = db.session.query(Food).filter_by(user_id=current_user.id).all()
     return render_template("fridge.html", items=items)
 
