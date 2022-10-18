@@ -1,0 +1,9 @@
+Hello [name]!
+
+The following foods will expire soon:
+
+[food_list]
+
+Make sure to use them soon!
+
+Best Wishes from MyFridge

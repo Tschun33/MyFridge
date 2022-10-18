@@ -10,6 +10,11 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from functools import wraps
 from flask import abort
 from forms import RegisterForm, LoginForm, FoodForm
+import schedule
+import time
+import atexit
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 app = Flask(__name__)
 # for learning purpose only
@@ -24,10 +29,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.query(User).filter_by(id=user_id).first()
 
 # Models
 class Food(db.Model):
@@ -56,7 +57,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(250), nullable=False)
     # User has many ingridients
     food = db.relationship('Food', backref='user')
-    recipe = db.relaionship('Recipe', backref='user')
+    recipe = db.relationship('Recipe', backref='user')
 
 
 class Recipe(UserMixin, db.Model):
@@ -65,7 +66,7 @@ class Recipe(UserMixin, db.Model):
     name = db.Column(db.String(250), nullable=False)
     category = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    ingredient = db.relationship('Ingredient', backref='recipe')
+    ingredient = db.relationship('Ingredient', backref='recipes')
 
 
 class Ingredient(UserMixin, db.Model):
@@ -74,7 +75,11 @@ class Ingredient(UserMixin, db.Model):
     name = db.Column(db.String(250), nullable=False)
     category = db.Column(db.String(250), nullable=False)
     quantity = db.Column(db.Float, nullable=False)
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipes.id'))
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.query(User).filter_by(id=user_id).first()
 
 
 db.create_all()
@@ -91,6 +96,53 @@ def admin_only(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+# Declaration of the task as a function.
+def check_mhd():
+    today = date.today()
+    food_expire_today = db.session.query(Food).filter_by(date_expired=today).all()
+    user_ids = set()
+    food_list = []
+    for food in food_expire_today:
+        user_id = db.session.query(User).filter_by(id=food.user_id).first().id
+        if user_id not in user_ids:
+            user_ids.add(user_id)
+    for user_id in user_ids:
+        user = db.session.query(User).filter_by(id=user_id).first()
+        food_to_expire = db.session.query(Food).filter_by(user_id=user_id,date_expired=today).all()
+        for food in food_to_expire:
+            food_list.append(food.name)
+            print(food_list)
+        email_template = open(f"Email/Templates/email_template.txt", "r")
+        file_text = email_template.read()
+        food_text = ', '.join(food_list)
+        text = file_text.replace(f"[name]", f"{user.name}").replace(f"[food_list]", f"{food_text}")
+        print(text)
+        with open(f"Email/Emails_to_send/email_to_{user_id}.txt", "w") as new_email:
+            new_email.write(text)
+
+
+
+
+
+
+
+
+
+
+# Create the background scheduler
+scheduler = BackgroundScheduler()
+# Create the job
+scheduler.add_job(func=check_mhd, trigger="interval", seconds=10)
+# Start the scheduler
+scheduler.start()
+
+# /!\ IMPORTANT /!\ : Shut down the scheduler when exiting the app
+atexit.register(lambda: scheduler.shutdown())
+
+
+
 
 
 # for learning purpose only. API-Key should be environment variable
@@ -157,7 +209,7 @@ def login():
     return render_template("login.html", form=form)
 
 
-@app.route("/add", methods=["POST", "GET"])
+@app.route("/add_food", methods=["POST", "GET"])
 @login_required
 def add_food():
     form = FoodForm()
@@ -176,6 +228,11 @@ def add_food():
 
     return render_template("add-food.html", form=form)
 
+@app.route("/create_recipe", methods=["POST", "GET"])
+@login_required
+def create_recipe():
+    form = RecipeForm()
+
 
 @app.route("/logout")
 @login_required
@@ -193,11 +250,11 @@ def show_fridge():
 
 
 # RESTful Routes
-@app.route("/all")
+@app.route("/all-recipes")
 def get_all():
     if request.args.get("api-key") == "SecretApiKey":
-        ingredients = db.session.query(Food).all()
-        return jsonify(ingredients=[ingredient.to_dict() for ingredient in ingredients])
+        recipes = db.session.query(Recipe).all()
+        return jsonify(recipes=[recipes.to_dict() for recipe in recipes])
     else:
         return jsonify(response={"error": "Not allowed"})
 
@@ -236,4 +293,4 @@ def update_ingredient(ingredient_id):
 
 # Runs the application
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

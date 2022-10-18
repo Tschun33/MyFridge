@@ -24,4 +24,10 @@ class FoodForm(FlaskForm):
     category = SelectField('Category', choices=[('Fruit', 'Fruit'), ('Vegetable', 'Vegetable'), ('Dairy', 'Dairy'),
                                                 ('Cheese', 'Cheese'), ('Raw Meat', 'Raw Meat')])
     date_expired = DateField('Expiration Date')
-    submit = SubmitField("Add Ingredient")
+    submit = SubmitField("Add Food")
+
+
+class RecipeForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
+    category = StringField("Category", validators=[DataRequired()])
+    submit = SubmitField("Create Recipe")
