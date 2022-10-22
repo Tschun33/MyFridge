@@ -22,7 +22,7 @@ Users will receive email-notificatios listing the groceries which will expire so
 - [ ] Create Docker Container
 - [ ] Host on AWS in EC2 
 
-Additonal functionality:
+## Additonal functionality:
     - Add recipes and ingredients
     - Add meal plans
     - Create shopping lists from meal plans 
