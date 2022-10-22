@@ -23,7 +23,7 @@ Users will receive email-notificatios listing the groceries which will expire so
 - [ ] Host on AWS in EC2 
 
 Additonal functionality:
-    - [ ] Add recipes and ingredients
-    - [ ] Add meal plans
-    - [ ] Create shopping lists from meal plans 
+    - Add recipes and ingredients
+    - Add meal plans
+    - Create shopping lists from meal plans 
 
