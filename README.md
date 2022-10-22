@@ -25,4 +25,3 @@ Additonal functionality:
     - [ ] Add meal plans
     - [ ] Create shopping lists from meal plans 
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
